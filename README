@@ -1,0 +1,187 @@
+Serial Multiboot Cable   (MSMC)
+-------------------------------
+
+	A quick hack from:
+    http://www.cs.man.ac.uk/~evansm7/projects/GBA/      http://www.axio.ms/
+
+    v1.0  3rd July 2002, Matt Evans  (matt@axio.ms)
+
+Before you start:
+
+Requires:  a unix box with the GNU ARM binutils.  Thumb is not required.
+	   a microcontroller-based cable to be built.  This will need
+	    soldering etc. :P  For 8051, the as31 assembler is needed.
+	   
+
+	1. Introduction
+
+This archive contains three separate programs that together provide a
+means to 'multiboot' code into a Gameboy Advance.  I have developed it
+to bootstrap developing code on my GBA.  "Multiboot" is the process
+whereby a GBA listens on its link port, when it is first switched
+on, for another 'master' GBA.  This GBA can then download code into
+the EWRAM (256K RAM) of the 'slave' GBA;  by pretending to be another
+GBA one can download and run code on a GBA without using a cartridge.
+
+This is not a new idea.  See the MBC2 on www.lik-sang.com for a
+commercial one, or www.godsmaze.org/gba for ajo's PIC-based parallel
+cable.
+
+These two cables both use microcontrollers attached to a PC parallel
+port.  The former is not open source, and costs money.  The latter is,
+but is tied to PC hardware.
+
+
+
+	2. Reasons...
+
+I built this because it was fun, and I had the bits lying around.  It
+didn't justify mailing off $40 or so to buy the commercial cable.
+
+More to the point, I was irritated by the windows-twistedness that
+most GBA development tools have.  I mean, *honestly*... ;-) 
+
+My cable uses a plain old RS232 serial connection to a unix box.  It
+has been tested on an x86 linux box, but there is no reason why it
+should not work on a Sun, Macintosh, SGI, iPaq etc. etc. 
+
+Anything with a serial port that can do 115.2kbit/s and that can run
+my weird-ass bastard code should do just fine.
+
+
+Enough waffle!
+
+	3. How it works
+
+Three pieces of code.  
+
+	3.1: 
+Firstly the microcontroller code in:
+
+8051cable/
+
+This is an example of how to make a smart serial <-> serial cable.  I
+used an 8051.  You might hate them and want to use something else.
+You might love them but not use quite the same brand of chip that I
+did.  Either way you might need to do some coding here...... but it is
+very simple.
+
+The GBA requires a strange serial format, 1 start bit, 16 data bits, 1
+stop bit shared over a single data wire (half-duplex) at 115.2kbit/s.
+The firmware in the cable receives 2 characters from the RS232 serial
+port and transmits them as a combined 16bit word.  The GBA then
+replies with a 16bit word that is split up and sent back to the host
+as 2 bytes.
+
+My cable allows an escape sequence to be sent to it to detect it and
+to change its mode.  It can be put into 'flat passthru' mode where any
+char received (from the host, or from the GBA) is sent through without
+alteration.  This is done to allow the GBA's 'UART mode' to talk
+straight to the host after it boots your code.  This allows:
+
+a)  User code to send stuff down the GBA serial port for
+debug/networking etc.
+
+b)  A second-stage bootloader (see later).
+
+The 8051 code in this directory stands as an example, hopefully if you
+have an 8051 lying around it should work without too much (but some)
+trouble.  Also it should be readable so you can make your own
+compatible cable out of a PIC, AVR, etc. (and please do!)  There is a
+lovely ascii-art schematic of my cable in the source.
+
+
+....moving on to:
+
+	3.2:
+
+2ndloader/
+
+This is a smallish multiboot image written in ARM code, assembled and
+linked using the GNU ARM binutils.  The cable multiboots this image
+into the GBA;  the 2ndloader then relocates itself to IWRAM and starts
+a simple bootloader listening on the GBA serial port in UART mode.
+
+I found the download speeds using the multiboot protocol to be
+painfully slow (encryption plus the round-trip-time of 2 serial
+links).  This tiny monitor downloads in a couple of seconds, and can
+then download the REAL multiboot code image at the full 11K/sec ish
+that the serial port can manage.
+
+This code has some extra frills not used by the front-end software
+which makes it larger than required.  It's still about 796 bytes, not
+too bad, but could be smaller.
+
+Edit the arm-binutils names in Makefile and 'make'.  This will produce
+loader.h that is included into the front-end sourcecode.
+
+
+	3.3:
+
+Linux/unix front-end code in the top-level directory.  This relies on
+the 2ndloader/loader.h data.  'make' should build the util 'gbl'.  
+
+It is configured to look for /dev/ttyS0 -- if you are not using this
+port, edit serxfer.c!
+
+This is a very simple util; you just pass it a filename of the code
+you want to download.  Make sure the cable is reset and ready for
+action.  The code is lacking timeouts and various nice retry things,
+but it works reliably on my machine.
+
+And lo,
+
+$ ./gbl MattDemo3s.mb
+[Opening serial...done, fd = 4.]
+[Checking cable version: 'GBA:MBA RS232 cable v0.1, 15/5/2002 me']
+-> Sending 2ndstage loader (796 bytes):
+0 7202 Sending data. Please wait...          CRC Ok - Transmision Done.  
+-> Setting cable to passthru at 115k2...done!
+
+-> Loaded 229736 bytes from MattDemo3s.mb.
+Talking to monitor
+Offset 00038160 sum 0000d3b3 [#######################                 ]
+
+Running code...done!
+
+$ _
+
+It downloads the 2ndloader using the (slow) multiboot protocol, sets
+the cable to do passthru, then downloads the code quickly via the monitor.
+
+
+
+	4. To do
+
+Neaten, tidy, scrub.  Proper makefiles anyone?  ;)
+
+The GBA supports speeds over 115kbits in the 32bit transfer mode.  It
+may be possible to send data faster using a 230.4Kbit/s serial port on
+a PC by adding another transfer mode (and a different 2ndbootloader)
+to the cable that re-packages the serial data into 32bit chunks and
+sends them at 1Mbit or so.  Needs experiments.
+
+Better (more) hardware support!  Different (more common) uC cables.
+
+This is a jumble of mess but I hope it gets you started.  I found
+Andrew May's website (http://program.at/Andrew) and Miguel Angel's
+site (http://www.godsmaze.org/gba/) very useful (shout out to them an'
+all dat jah.. er.)  Hope you find this helpful.
+
+
+	5. Copyrights
+
+"multi.c" written by Miguel Angel and commented by Andrew May, (c)
+them.  The rest of the front-end code is (c) 2002 me.
+
+2ndbootloader and 8051 cable code (c) 2002 me.  
+
+You may distribute this code as you wish, making changes as you like
+or dislike, though I ask that all the files stay together when they
+move, along with this README.  Please let me know of any usefulness
+you've added to the code!  
+
+This software may be used and distributed according to the terms
+of the GNU General Public License.
+
+-matt
