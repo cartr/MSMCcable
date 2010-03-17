@@ -11,13 +11,6 @@
    under the GPL.
 */
 
-#define DEVICE "/dev/ttyS0" 
-
-/* Tune this to your setup.  I know, you want to set it on the command
-   line. DIY.  I know, having autoconf do it would be really smart.  DIY...
-   */
-
-
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -37,10 +30,12 @@ int ser_fd;
 FILE *ser_fp;
 
 extern unsigned char Header [];
+extern int opendelay;
+extern char *device;
 
 void serial_error(char *s)
 {
-  printf(s); 
+  printf(s);
   exit(0);
 }
 
@@ -69,12 +64,12 @@ void xfer_init(void)
     sigaction (SIGBUS, &cleanup, NULL);
     */
 
-  ser_fd = open(DEVICE, O_RDWR | O_NOCTTY | O_NDELAY);
+  ser_fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
   
   printf("[Opening serial..");
-  if ( (ser_fd = open(DEVICE, O_SYNC | O_RDWR)) == -1 )
+  if ( (ser_fd = open(device, O_SYNC | O_RDWR)) == -1 )
     {
-      printf("Can't open %s!\n", DEVICE);
+      printf("Can't open %s!\n", device);
       exit(0);
     }
 
@@ -100,7 +95,10 @@ void xfer_init(void)
 
   
   printf(".done, fd = %d.]\n", ser_fd);
-
+  
+  //Wait for arduino clones to reset
+  sleep(opendelay);
+  
   /* Check for cable.  Sending 255,255,255 will ensure it's in
      command mode.  '1' will return version string, and '2' puts
      it into multilink mode.

@@ -1,17 +1,26 @@
 Serial Multiboot Cable   (MSMC)
 -------------------------------
 
-	A quick hack from:
-    http://www.cs.man.ac.uk/~evansm7/projects/GBA/      http://www.axio.ms/
+	Originally by Matt Evans (http://www.axio.ms/)
+        Modified by Steve Lynch (http://blog.evildro.me.uk/)
 
-    v1.0  3rd July 2002, Matt Evans  (matt@axio.ms)
+    v1.01 17th Match 2010, Steve Lynch  (astephenlynch@gmail.com)
+          -Added -d option (delay for 0 - 9 seconds after opening the serial
+            port.
+          -Added -p option path to the serial port connected to the multiboot
+            cable.
+          -Added a port of the microcontroller code to the arduino (should be
+            portable plain avr-gcc fairly easily)
+    v1.00 3rd July 2002, Matt Evans  (matt@axio.ms)
+          -Initial version.
 
 Before you start:
 
 Requires:  a unix box with the GNU ARM binutils.  Thumb is not required.
 	   a microcontroller-based cable to be built.  This will need
-	    soldering etc. :P  For 8051, the as31 assembler is needed.
-	   
+	    soldering etc. :P  	  
+	   For 8051, the as31 assembler is needed.
+	   For Arduino, the arduino IDE is needed.   
 
 	1. Introduction
 
@@ -58,7 +67,8 @@ Three pieces of code.
 	3.1: 
 Firstly the microcontroller code in:
 
-8051cable/
+8051cable/ (Original 8051 version of the code)
+arduinocable/ (A port of the 8051 code to the arduino).
 
 This is an example of how to make a smart serial <-> serial cable.  I
 used an 8051.  You might hate them and want to use something else.
@@ -89,7 +99,6 @@ have an 8051 lying around it should work without too much (but some)
 trouble.  Also it should be readable so you can make your own
 compatible cable out of a PIC, AVR, etc. (and please do!)  There is a
 lovely ascii-art schematic of my cable in the source.
-
 
 ....moving on to:
 
@@ -122,7 +131,7 @@ Linux/unix front-end code in the top-level directory.  This relies on
 the 2ndloader/loader.h data.  'make' should build the util 'gbl'.  
 
 It is configured to look for /dev/ttyS0 -- if you are not using this
-port, edit serxfer.c!
+port, use the -p option!
 
 This is a very simple util; you just pass it a filename of the code
 you want to download.  Make sure the cable is reset and ready for
@@ -172,14 +181,16 @@ all dat jah.. er.)  Hope you find this helpful.
 	5. Copyrights
 
 "multi.c" written by Miguel Angel and commented by Andrew May, (c)
-them.  The rest of the front-end code is (c) 2002 me.
+them.  The rest of the front-end code is (c) 2002 Matt Evans.
 
-2ndbootloader and 8051 cable code (c) 2002 me.  
+2ndbootloader and 8051 cable code (c) 2002 Matt Evans.  
+
+arduino cable code (c) 2010 Stephen Lynch
 
 You may distribute this code as you wish, making changes as you like
 or dislike, though I ask that all the files stay together when they
 move, along with this README.  Please let me know of any usefulness
-you've added to the code!  
+you've added to the code!
 
 This software may be used and distributed according to the terms
 of the GNU General Public License.

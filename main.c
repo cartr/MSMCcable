@@ -9,7 +9,9 @@
 
 int verbose = 1;
 int verbose2 = 0;
+int opendelay = 0;
 
+char *device = "/dev/ttyS0";
 extern void xfer_init(void);
 extern void xfer_passthru(void);
 extern int multi(int);       /* The multiboot code to do the transfer encoding */
@@ -30,7 +32,13 @@ int ClientLength;
 
 void usage(char *name)
 {
-  fprintf(stderr, "[GBA serial multiboot loader v1.00]\nUsage: %s [-v] file.mb\n\t-v:\tVerbose (serial link debugging)\n", name); 
+  fprintf(stderr, "[GBA serial multiboot loader v1.01]\nUsage: %s [-v] [-an] [-p<path>] file.mb\n"
+                  "\t-v:\t\tVerbose (serial link debugging)\n"
+                  "\t-dn:\t\twait for n (0 - 9) seconds after opening the serial port\n"
+                  "\t\t\tRequired on arduinos which auto reset\n"
+                  "\t-p<path>:\tPath to the device the multiboot cable is connected to\n"
+                  "\t\t\tDefaults to -p/dev/ttyS0\n"
+                  , name); 
 }
 
 /***********************************************************************
@@ -55,6 +63,24 @@ int main(int argc,char **argv)
 	break;
       if (argv[i][1] == 'v')
 	verbose2 = 1;
+      else if (argv[i][1] == 'd')
+      	{
+       	  opendelay = atoi(&argv[i][2]);
+       	  if (opendelay < 0 || opendelay > 9)
+       	    {
+              fprintf(stderr,"No valid time specified after -d (note there must be no space after -d)\n");
+              exit(1);
+       	    }
+      	}
+      else if (argv[i][1] == 'p')
+        {
+          device = &argv[i][2];
+          if (strlen(device) <1)
+            {
+              fprintf(stderr,"No path specified after -p (note there must be no space after -p)\n");
+              exit(1);
+            }
+        }
       else if (argv[i][1] == 'h')
 	{
 	  usage(argv[0]);
